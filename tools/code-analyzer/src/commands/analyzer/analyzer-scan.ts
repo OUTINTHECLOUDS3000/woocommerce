@@ -56,8 +56,12 @@ const program = new Command()
 		'Output style for the results. Options: github, cli. Github output will set the results as an output variable for Github actions.',
 		'cli'
 	)
+	.option(
+		'-p, --allowPlaceholder',
+		'For template or hook changes, allow placeholder versions.'
+	)
 	.action( async ( scanType, compare, base, options ) => {
-		const { since: sinceVersion, source, outputStyle } = options;
+		const { since: sinceVersion, source, outputStyle, allowPlaceholder } = options;
 
 		if (
 			( scanType === 'hooks' || scanType === 'templates' ) &&
@@ -76,7 +80,9 @@ const program = new Command()
 						compare,
 						sinceVersion,
 						base,
-						source
+						source,
+						undefined,
+						!! allowPlaceholder
 					);
 
 					if ( hookChanges.length ) {
@@ -98,7 +104,9 @@ const program = new Command()
 						compare,
 						sinceVersion,
 						base,
-						source
+						source,
+						undefined,
+						!! allowPlaceholder
 					);
 					if ( templateChanges && templateChanges.length ) {
 						printTemplateResults(
