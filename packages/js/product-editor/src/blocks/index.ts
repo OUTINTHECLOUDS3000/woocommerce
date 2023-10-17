@@ -31,3 +31,4 @@ export { init as initNoticeHasVariations } from './product-fields/notice-has-var
 export { init as initTaxonomy } from './generic/taxonomy';
 export { init as initText } from './generic/text';
 export { init as initNumber } from './generic/number';
+export { init as initDialog } from './generic/dialog';

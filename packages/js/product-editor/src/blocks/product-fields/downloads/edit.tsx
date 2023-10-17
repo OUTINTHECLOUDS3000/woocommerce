@@ -15,6 +15,10 @@ import { MediaItem } from '@wordpress/media-utils';
 import { useWooBlockProps } from '@woocommerce/block-templates';
 import { ListItem, MediaUploader, Sortable } from '@woocommerce/components';
 import { Product, ProductDownload } from '@woocommerce/data';
+import {
+	// @ts-expect-error no exported member.
+	useInnerBlocksProps,
+} from '@wordpress/block-editor';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore No types for this exist yet.
 // eslint-disable-next-line @woocommerce/dependency-group
@@ -42,13 +46,26 @@ function stringifyEntityId< ID, T extends { id?: ID } >( entity: T ): T {
 
 export function Edit( {
 	attributes,
+	clientId,
 }: BlockEditProps< UploadsBlockAttributes > ) {
 	const blockProps = useWooBlockProps( attributes );
+	const { children, ...innerBlockProps } = useInnerBlocksProps( blockProps, {
+		templateLock: 'all',
+		attributes: { isOpen: true },
+	} );
+
+	const [ id ] = useEntityProp< Product[ 'id' ] >(
+		'postType',
+		'product',
+		'id'
+	);
+
 	const [ , setDownloadable ] = useEntityProp< Product[ 'downloadable' ] >(
 		'postType',
 		'product',
 		'downloadable'
 	);
+
 	const [ downloads, setDownloads ] = useEntityProp< Product[ 'downloads' ] >(
 		'postType',
 		'product',
@@ -59,6 +76,16 @@ export function Edit( {
 		const { getEditorSettings } = select( 'core/editor' );
 		return getEditorSettings();
 	} );
+
+	const [ dialogClientId ] = useSelect(
+		( select ) => {
+			const { getBlockOrder } = select( 'core/block-editor' );
+			return getBlockOrder( clientId );
+		},
+		[ clientId ]
+	);
+
+	const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
 
 	const allowedTypes = allowedMimeTypes
 		? Object.values( allowedMimeTypes )
@@ -137,8 +164,22 @@ export function Edit( {
 	}
 
 	return (
-		<div { ...blockProps }>
+		<div { ...innerBlockProps }>
 			<div className="wp-block-woocommerce-product-downloads-field__header">
+				<Button
+					variant="tertiary"
+					onClick={ () => {
+						updateBlockAttributes( dialogClientId, {
+							isOpen: true,
+							onClose() {
+								alert( 'Closeing modal!!!' );
+							},
+						} );
+					} }
+				>
+					{ __( 'Manage limits', 'woocommerce' ) }
+				</Button>
+
 				<DownloadsMenu
 					allowedTypes={ allowedTypes }
 					onUploadSuccess={ handleFileUpload }
@@ -237,6 +278,8 @@ export function Edit( {
 					</Sortable>
 				) }
 			</div>
+
+			{ children }
 		</div>
 	);
 }
