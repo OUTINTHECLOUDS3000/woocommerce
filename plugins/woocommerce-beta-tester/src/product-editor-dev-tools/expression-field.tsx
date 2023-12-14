@@ -1,0 +1,139 @@
+/**
+ * External dependencies
+ */
+import { Product } from '@woocommerce/data';
+import { evaluate } from '@woocommerce/expression-evaluation';
+import { Button } from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
+import { check, close, edit } from '@wordpress/icons';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+
+export function ExpressionField( {
+	expression,
+	evaluationContext,
+	mode = 'view',
+	onEnterEdit,
+	onUpdate = () => {},
+	onCancel,
+	updateLabel = __( 'Update', 'woocommerce' ),
+}: {
+	expression: string;
+	evaluationContext: {
+		postType: string;
+		editedProduct: Product;
+	};
+	mode?: 'view' | 'edit';
+	onEnterEdit?: () => void;
+	onUpdate?: ( expression: string ) => void;
+	onCancel?: () => void;
+	updateLabel?: string;
+} ) {
+	const [ editedExpression, setEditedExpression ] =
+		useState< string >( expression );
+
+	useEffect( () => {
+		setEditedExpression( expression );
+	}, [ expression ] );
+
+	const evaluateExpression = () => {
+		let result;
+
+		try {
+			result = JSON.stringify(
+				evaluate( editedExpression, evaluationContext ),
+				null,
+				4
+			);
+		} catch ( error ) {
+			result = __( 'Error evaluating expression', 'woocommerce' );
+		}
+
+		return result;
+	};
+
+	const result = evaluateExpression();
+
+	const expressionTextAreaRef = useRef< HTMLTextAreaElement >( null );
+
+	const handleOnChange = (
+		event: React.ChangeEvent< HTMLTextAreaElement >
+	) => {
+		setEditedExpression( event.target.value );
+	};
+
+	useLayoutEffect( () => {
+		const textArea = expressionTextAreaRef.current;
+
+		if ( ! textArea ) return;
+
+		textArea.style.height = 'auto';
+		textArea.style.height = textArea.scrollHeight + 'px';
+	}, [ editedExpression ] );
+
+	const handleOnUpdate = () => {
+		onUpdate( editedExpression );
+	};
+
+	const handleOnCancel = () => {
+		if ( onCancel ) onCancel();
+	};
+
+	return (
+		<div
+			className={
+				'woocommerce-product-editor-dev-tools-expression-field ' +
+				`${ mode !== 'edit' ? 'readonly' : '' }`
+			}
+		>
+			<div className="woocommerce-product-editor-dev-tools-expression-field__expression_and_result">
+				<textarea
+					ref={ expressionTextAreaRef }
+					className="woocommerce-product-editor-dev-tools-expression-field__expression"
+					rows={ 1 }
+					placeholder={ __(
+						'Enter an expression to evaluate',
+						'woocommerce'
+					) }
+					readOnly={ mode !== 'edit' }
+					onChange={ handleOnChange }
+					value={ editedExpression }
+				/>
+				{ editedExpression !== '' && (
+					<div className="woocommerce-product-editor-dev-tools-expression-field__result">
+						{ result }
+					</div>
+				) }
+			</div>
+			<div className="woocommerce-product-editor-dev-tools-expression-field__actions">
+				{ mode === 'edit' ? (
+					<>
+						<Button
+							icon={ check }
+							label={ updateLabel }
+							onClick={ handleOnUpdate }
+						/>
+						<>
+							{ onCancel && (
+								<Button
+									icon={ close }
+									label={ __( 'Cancel', 'woocommerce' ) }
+									onClick={ handleOnCancel }
+								/>
+							) }
+						</>
+					</>
+				) : (
+					<>
+						{ onEnterEdit && (
+							<Button
+								icon={ edit }
+								label={ __( 'Edit', 'woocommerce' ) }
+								onClick={ onEnterEdit }
+							/>
+						) }
+					</>
+				) }
+			</div>
+		</div>
+	);
+}

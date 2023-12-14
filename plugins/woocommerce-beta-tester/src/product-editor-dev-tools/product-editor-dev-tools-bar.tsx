@@ -21,7 +21,8 @@ import { useEntityProp } from '@wordpress/core-data';
 /**
  * Internal dependencies
  */
-import { BlockInspectorTabPanel } from './block-inspector-tab-panel';
+import { TemplateTabPanel } from './template-tab-panel';
+import { TemplateEventsTabPanel } from './template-events-tab-panel';
 import { HelpTabPanel } from './help-tab-panel';
 import { ProductTabPanel } from './product-tab-panel';
 
@@ -60,16 +61,74 @@ export function ProductEditorDevToolsBar( {
 		select( 'core' ).getEditedEntityRecord( 'postType', postType, id )
 	);
 
-	const [ lastSelectedBlock, setLastSelectedBlock ] = useState( null );
+	const [ initialRender, setInitialRender ] = useState( true );
 
-	const selectedBlock = useSelect( ( select: typeof WPSelect ) =>
+	const [ selectedBlock, setSelectedBlock ] = useState< any >( null );
+
+	const [ selectedBlockTemplateId, setSelectedBlockTemplateId ] =
+		useState< string >( '' );
+
+	const selectedBlockInEditor = useSelect( ( select: typeof WPSelect ) =>
 		select( 'core/block-editor' ).getSelectedBlock()
 	);
 
-	useEffect( () => {
-		if ( selectedBlock !== null ) {
-			setLastSelectedBlock( selectedBlock );
+	function findBlockByTemplateBlockId(
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		blocks: any[],
+		templateBlockId: string
+	) {
+		for ( const block of blocks ) {
+			if ( block.attributes._templateBlockId === templateBlockId ) {
+				return block;
+			}
+
+			if ( block.innerBlocks.length > 0 ) {
+				const matchingInnerBlock = findBlockByTemplateBlockId(
+					block.innerBlocks,
+					templateBlockId
+				) as unknown;
+				if ( matchingInnerBlock ) {
+					return matchingInnerBlock;
+				}
+			}
 		}
+
+		return null;
+	}
+
+	const selectedBlockByTemplateBlockId = useSelect(
+		( select: typeof WPSelect ) => {
+			const blocks = select( 'core/block-editor' ).getBlocks();
+			return findBlockByTemplateBlockId(
+				blocks,
+				selectedBlockTemplateId
+			);
+		}
+	);
+
+	useEffect( () => {
+		if ( ! selectedBlockInEditor ) {
+			return;
+		}
+
+		setSelectedBlock( selectedBlockInEditor );
+	}, [ selectedBlockInEditor ] );
+
+	useEffect( () => {
+		if ( ! selectedBlockByTemplateBlockId && initialRender ) {
+			setInitialRender( false );
+			return;
+		}
+
+		setSelectedBlock( selectedBlockByTemplateBlockId );
+	}, [ selectedBlockByTemplateBlockId, initialRender ] );
+
+	useEffect( () => {
+		if ( ! selectedBlock ) {
+			return;
+		}
+
+		setSelectedBlockTemplateId( selectedBlock.attributes._templateBlockId );
 	}, [ selectedBlock ] );
 
 	const evaluationContext = {
@@ -77,7 +136,7 @@ export function ProductEditorDevToolsBar( {
 		editedProduct: product,
 	};
 
-	const [ selectedTab, setSelectedTab ] = useState< string >( 'inspector' );
+	const [ selectedTab, setSelectedTab ] = useState< string >( 'template' );
 
 	function handleNavigate( _childIndex: number, child: HTMLButtonElement ) {
 		child.click();
@@ -98,11 +157,18 @@ export function ProductEditorDevToolsBar( {
 							onNavigate={ handleNavigate }
 						>
 							<TabButton
-								name="inspector"
+								name="template"
 								selectedTab={ selectedTab }
 								onClick={ handleTabClick }
 							>
-								{ __( 'Block Inspector', 'woocommerce' ) }
+								{ __( 'Template', 'woocommerce' ) }
+							</TabButton>
+							<TabButton
+								name="events"
+								selectedTab={ selectedTab }
+								onClick={ handleTabClick }
+							>
+								{ __( 'Template Events', 'woocommerce' ) }
 							</TabButton>
 							<TabButton
 								name="product"
@@ -129,9 +195,18 @@ export function ProductEditorDevToolsBar( {
 					</div>
 				</div>
 				<div className="woocommerce-product-editor-dev-tools-bar__panel">
-					<BlockInspectorTabPanel
-						selectedBlock={ lastSelectedBlock }
-						isSelected={ selectedTab === 'inspector' }
+					<TemplateTabPanel
+						evaluationContext={ evaluationContext }
+						setSelectedBlockTemplateId={
+							setSelectedBlockTemplateId
+						}
+						selectedBlockTemplateId={ selectedBlockTemplateId }
+						selectedBlock={ selectedBlock }
+						isSelected={ selectedTab === 'template' }
+					/>
+					<TemplateEventsTabPanel
+						postType={ postType }
+						isSelected={ selectedTab === 'events' }
 					/>
 					<ProductTabPanel
 						evaluationContext={ evaluationContext }
