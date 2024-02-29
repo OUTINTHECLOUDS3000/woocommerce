@@ -163,6 +163,12 @@
 					}
 				}
 			]
+		},
+		"prod": {
+			"repo": "plugin-woocommerce",
+			"branch": "trunk",
+			"build-command": "build:zip",
+			"archive": "woocommerce.zip"
 		}
 	},
 	"devDependencies": {
