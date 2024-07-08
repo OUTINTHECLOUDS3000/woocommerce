@@ -9,8 +9,11 @@ const glob = require( 'glob' );
 // path should be defined in the `customDir` property. The scripts below will
 // take care of looking for `index.js`, `frontend.js` and `*.scss` files in each
 // block directory.
+//
 // If a block is experimental, it should be marked with the `isExperimental`
 // property.
+// Update plugins/woocommerce-blocks/docs/internal-developers/blocks/feature-flags-and-experimental-interfaces.md
+// when you mark/unmark block experimental.
 const blocks = {
 	'active-filters': {},
 	'add-to-cart-form': {},
@@ -92,6 +95,15 @@ const blocks = {
 	'product-filter': {
 		isExperimental: true,
 	},
+	'product-filters': {
+		isExperimental: true,
+	},
+	'product-filters-overlay': {
+		isExperimental: true,
+	},
+	'product-filters-overlay-navigation': {
+		isExperimental: true,
+	},
 	'product-filter-stock-status': {
 		isExperimental: true,
 		customDir: 'product-filter/inner-blocks/stock-filter',
@@ -110,6 +122,10 @@ const blocks = {
 	},
 	'product-filter-active': {
 		customDir: 'product-filter/inner-blocks/active-filters',
+		isExperimental: true,
+	},
+	'product-filter-clear-button': {
+		customDir: 'product-filter/inner-blocks/clear-button',
 		isExperimental: true,
 	},
 	'order-confirmation-summary': {
@@ -157,16 +173,8 @@ const blocks = {
 // `**/*.scss`...).
 // It also filters out elements with undefined props and experimental blocks.
 const getBlockEntries = ( relativePath ) => {
-	const experimental =
-		! parseInt( process.env.WOOCOMMERCE_BLOCKS_PHASE, 10 ) < 3;
-
 	return Object.fromEntries(
 		Object.entries( blocks )
-			.filter(
-				( [ , config ] ) =>
-					! config.isExperimental ||
-					config.isExperimental === experimental
-			)
 			.map( ( [ blockCode, config ] ) => {
 				const filePaths = glob.sync(
 					`./assets/js/blocks/${ config.customDir || blockCode }/` +

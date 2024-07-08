@@ -35,6 +35,10 @@
 		"placeholder": {
 			"type": "string",
 			"__experimentalRole": "content"
+		},
+		"help": {
+			"type": "string",
+			"__experimentalRole": "content"
 		}
 	},
 	"supports": {
@@ -47,5 +51,5 @@
 		"__experimentalToolbar": false
 	},
 	"editorStyle": "file:./editor.css",
-	"usesContext": [ "postType" ]
+	"usesContext": [ "postType", "isInSelectedTab" ]
 }
