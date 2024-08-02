@@ -3,6 +3,13 @@
  */
 import type { AddToCartEventDetail } from '@woocommerce/types';
 
+/**
+ * Internal dependencies
+ */
+import { EVENT } from './events';
+
+export { EVENT };
+
 const CustomEvent = window.CustomEvent || null;
 
 interface DispatchedEventProperties {
@@ -20,7 +27,7 @@ interface DispatchedEventProperties {
  * Wrapper function to dispatch an event.
  */
 export const dispatchEvent = (
-	name: string,
+	name: EVENT,
 	{
 		bubbles = false,
 		cancelable = false,
@@ -43,7 +50,7 @@ export const dispatchEvent = (
 };
 
 export const triggerAddingToCartEvent = (): void => {
-	dispatchEvent( 'wc-blocks_adding_to_cart', {
+	dispatchEvent( EVENT.WC_BLOCKS_ADDING_TO_CART, {
 		bubbles: true,
 		cancelable: true,
 	} );
@@ -52,7 +59,7 @@ export const triggerAddingToCartEvent = (): void => {
 export const triggerAddedToCartEvent = ( {
 	preserveCartData = false,
 }: AddToCartEventDetail ): void => {
-	dispatchEvent( 'wc-blocks_added_to_cart', {
+	dispatchEvent( EVENT.WC_BLOCKS_ADDED_TO_CART, {
 		bubbles: true,
 		cancelable: true,
 		detail: { preserveCartData },
@@ -60,7 +67,7 @@ export const triggerAddedToCartEvent = ( {
 };
 
 export const triggerProductListRenderedEvent = (): void => {
-	dispatchEvent( 'wc-blocks_product_list_rendered', {
+	dispatchEvent( EVENT.WC_BLOCKS_PRODUCT_LIST_RENDERED, {
 		bubbles: true,
 		cancelable: true,
 	} );
