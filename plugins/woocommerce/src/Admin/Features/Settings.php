@@ -3,19 +3,14 @@
  * WooCommerce Settings.
  */
 
-namespace Automattic\WooCommerce\Internal\Admin;
+ namespace Automattic\WooCommerce\Admin\Features;
 
 use Automattic\WooCommerce\Admin\PageController;
 
 /**
  * Contains backend logic for the Settings feature.
  */
-class SettingsNavigationFeature {
-	/**
-	 * Option name used to toggle this feature.
-	 */
-	const TOGGLE_OPTION_NAME = 'woocommerce_settings_enabled';
-
+class Settings {
 	/**
 	 * Class instance.
 	 *
@@ -42,11 +37,6 @@ class SettingsNavigationFeature {
 		}
 
 		add_filter( 'woocommerce_settings_features', array( $this, 'add_feature_toggle' ) );
-
-		if ( 'yes' !== get_option( 'woocommerce_settings_enabled', 'no' ) ) {
-			return;
-		}
-
 		add_filter( 'woocommerce_admin_shared_settings', array( __CLASS__, 'add_component_settings' ) );
 		// Run this after the original WooCommerce settings have been added.
 		add_action( 'admin_menu', array( $this, 'register_pages' ), 60 );
@@ -64,13 +54,24 @@ class SettingsNavigationFeature {
 			return $settings;
 		}
 
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		$page = sanitize_text_field( wp_unslash( $_GET['page'] ) );
+		$path = sanitize_text_field( wp_unslash( $_GET['path'] ) );
+
+		// Only add data when we are on the settings page.
+		if ( 'wc-admin' !== $page && 0 !== strpos( $path, '/settings' ) ) {
+			return $settings;
+		}
+		// phpcs:enable
+
 		$setting_pages = \WC_Admin_Settings::get_settings_pages();
 		$pages         = array();
 		foreach ( $setting_pages as $setting_page ) {
-			$pages = $setting_page->add_settings_page( $pages );
+			$pages = $setting_page->get_settings_page_data( $pages );
 		}
 
 		$settings['settingsPages'] = $pages;
+		$settings['settingsNonce'] = wp_create_nonce( 'woocommerce-settings' );
 
 		return $settings;
 	}
