@@ -1,17 +1,17 @@
 /**
  * External dependencies
  */
-import type { BlockConfiguration } from '@wordpress/blocks';
-import { registerBlockSingleProductTemplate } from '@woocommerce/atomic-utils';
+import { type BlockConfiguration } from '@wordpress/blocks';
+import { registerBlockSingleProductTemplate } from '@woocommerce/blocks-utils';
 
 /**
  * Internal dependencies
  */
-import sharedConfig from '../shared/config';
 import edit from './edit';
 import { BLOCK_ICON as icon } from './constants';
 import metadata from './block.json';
 import { supports } from './support';
+import sharedConfig from '../shared/config';
 
 const blockConfig: BlockConfiguration = {
 	...sharedConfig,
