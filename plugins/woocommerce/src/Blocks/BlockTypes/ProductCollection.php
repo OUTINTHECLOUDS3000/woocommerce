@@ -46,6 +46,12 @@ class ProductCollection extends AbstractBlock {
 	 */
 	protected $custom_order_opts = array( 'popularity', 'rating' );
 
+	/**
+	 * Whether the render of the block should be prevented.
+	 *
+	 * @var bool
+	 */
+	private $prevent_render = null;
 
 	/**
 	 * Initialize this block type.
@@ -80,14 +86,61 @@ class ProductCollection extends AbstractBlock {
 		// Provide location context into block's context.
 		add_filter( 'render_block_context', array( $this, 'provide_location_context_for_inner_blocks' ), 11, 1 );
 
+		// Disable block render if the ProductTemplate block is empty.
+		add_filter(
+			'render_block_woocommerce/product-template',
+			function ( $html ) {
+				if ( null === $this->prevent_render ) {
+					$this->prevent_render = '' === $html;
+				}
+
+				return $html;
+			},
+			100,
+			1
+		);
+
+		// Enable block render if the ProductCollectionNoResults block is rendered.
+		add_filter(
+			'render_block_woocommerce/product-collection-no-results',
+			function ( $html ) {
+				$this->prevent_render = false;
+
+				return $html;
+			},
+			100,
+			1
+		);
+
 		// Interactivity API: Add navigation directives to the product collection block.
-		add_filter( 'render_block_woocommerce/product-collection', array( $this, 'enhance_product_collection_with_interactivity' ), 10, 2 );
+		add_filter( 'render_block_woocommerce/product-collection', array( $this, 'handle_product_collection_rendering' ), 10, 2 );
 		add_filter( 'render_block_core/query-pagination', array( $this, 'add_navigation_link_directives' ), 10, 3 );
 
 		add_filter( 'posts_clauses', array( $this, 'add_price_range_filter_posts_clauses' ), 10, 2 );
 
 		// Disable client-side-navigation if incompatible blocks are detected.
 		add_filter( 'render_block_data', array( $this, 'disable_enhanced_pagination' ), 10, 1 );
+	}
+
+	/**
+	 * Handle the rendering of the block.
+	 *
+	 * @param string $block_content The block content about to be rendered.
+	 * @param array  $block The block being rendered.
+	 *
+	 * @return string
+	 */
+	public function handle_product_collection_rendering( $block_content, $block ) {
+		if ( true === $this->prevent_render ) {
+			$block_content = '';
+		} else {
+			$block_content = $this->enhance_product_collection_with_interactivity( $block_content, $block );
+		}
+
+		// Reset the prevent_render flag.
+		$this->prevent_render = null;
+
+		return $block_content;
 	}
 
 	/**
