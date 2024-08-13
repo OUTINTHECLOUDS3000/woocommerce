@@ -25,6 +25,7 @@ import {
 	ProductCollectionDisplayLayout,
 	PreviewState,
 	SetPreviewState,
+	ProductCollectionUIStatesInEditor,
 } from './types';
 import {
 	coreQueryPaginationBlockName,
@@ -166,41 +167,14 @@ export const addProductCollectionToQueryPaginationParentOrAncestor = () => {
 };
 
 /**
- * Get the preview message for the Product Collection block based on the usesReference.
- * There are two scenarios:
- * 1. When usesReference is product, the preview message will be:
- * 	  "Actual products will vary depending on the product being viewed."
- * 2. For all other usesReference, the preview message will be:
- *    "Actual products will vary depending on the page being viewed."
- *
- * This message will be shown when the usesReference isn't available on the Editor side, but is available on the Frontend.
+ * Get the message to show in the preview label when the block is in preview mode based
+ * on the `usesReference` value.
  */
 export const getUsesReferencePreviewMessage = (
 	location: WooCommerceBlockLocation,
-	usesReference?: string[]
+	isUsesReferencePreviewMode: boolean
 ) => {
-	if ( ! ( Array.isArray( usesReference ) && usesReference.length > 0 ) ) {
-		return '';
-	}
-
-	if ( usesReference.includes( location.type ) ) {
-		/**
-		 * Block shouldn't be in preview mode when:
-		 * 1. Current location is archive and termId is available.
-		 * 2. Current location is product and productId is available.
-		 *
-		 * Because in these cases, we have required context on the editor side.
-		 */
-		const isArchiveLocationWithTermId =
-			location.type === LocationType.Archive &&
-			( location.sourceData?.termId ?? null ) !== null;
-		const isProductLocationWithProductId =
-			location.type === LocationType.Product &&
-			( location.sourceData?.productId ?? null ) !== null;
-		if ( isArchiveLocationWithTermId || isProductLocationWithProductId ) {
-			return '';
-		}
-
+	if ( isUsesReferencePreviewMode ) {
 		if ( location.type === LocationType.Product ) {
 			return __(
 				'Actual products will vary depending on the product being viewed.',
@@ -217,12 +191,77 @@ export const getUsesReferencePreviewMessage = (
 	return '';
 };
 
+export const getProductCollectionUIStateInEditor = ( {
+	location,
+	usesReference,
+	attributes,
+	hasInnerBlocks,
+}: {
+	location: WooCommerceBlockLocation;
+	usesReference?: string[] | undefined;
+	attributes: ProductCollectionAttributes;
+	hasInnerBlocks: boolean;
+} ): ProductCollectionUIStatesInEditor => {
+	const isInRequiredLocation = usesReference?.includes( location.type );
+	const isCollectionSelected = !! attributes.collection;
+
+	/**
+	 * Case 1: Product context picker
+	 */
+	const isProductContextRequired = usesReference?.includes( 'product' );
+	const isProductContextSelected =
+		( attributes.query?.productReference ?? null ) !== null;
+	if (
+		isProductContextRequired &&
+		! isInRequiredLocation &&
+		! isProductContextSelected &&
+		isCollectionSelected
+	) {
+		return ProductCollectionUIStatesInEditor.PRODUCT_REFERENCE_PICKER;
+	}
+
+	/**
+	 * Case 2: Preview mode - based on `usesReference` value
+	 */
+	if ( isInRequiredLocation ) {
+		/**
+		 * Block shouldn't be in preview mode when:
+		 * 1. Current location is archive and termId is available.
+		 * 2. Current location is product and productId is available.
+		 *
+		 * Because in these cases, we have required context on the editor side.
+		 */
+		const isArchiveLocationWithTermId =
+			location.type === LocationType.Archive &&
+			( location.sourceData?.termId ?? null ) !== null;
+		const isProductLocationWithProductId =
+			location.type === LocationType.Product &&
+			( location.sourceData?.productId ?? null ) !== null;
+
+		if (
+			! isArchiveLocationWithTermId &&
+			! isProductLocationWithProductId
+		) {
+			return ProductCollectionUIStatesInEditor.VALID_WITH_PREVIEW;
+		}
+	}
+
+	/**
+	 * Case 3: Collection chooser
+	 */
+	if ( ! hasInnerBlocks && ! isCollectionSelected ) {
+		return ProductCollectionUIStatesInEditor.COLLECTION_PICKER;
+	}
+
+	return ProductCollectionUIStatesInEditor.VALID;
+};
+
 export const useSetPreviewState = ( {
 	setPreviewState,
 	location,
 	attributes,
 	setAttributes,
-	usesReference,
+	isUsesReferencePreviewMode,
 }: {
 	setPreviewState?: SetPreviewState | undefined;
 	location: WooCommerceBlockLocation;
@@ -231,6 +270,7 @@ export const useSetPreviewState = ( {
 		attributes: Partial< ProductCollectionAttributes >
 	) => void;
 	usesReference?: string[] | undefined;
+	isUsesReferencePreviewMode: boolean;
 } ) => {
 	const setState = ( newPreviewState: PreviewState ) => {
 		setAttributes( {
@@ -240,8 +280,6 @@ export const useSetPreviewState = ( {
 			},
 		} );
 	};
-	const isCollectionUsesReference =
-		usesReference && usesReference?.length > 0;
 
 	/**
 	 * When usesReference is available on Frontend but not on Editor side,
@@ -249,10 +287,10 @@ export const useSetPreviewState = ( {
 	 */
 	const usesReferencePreviewMessage = getUsesReferencePreviewMessage(
 		location,
-		usesReference
+		isUsesReferencePreviewMode
 	);
 	useLayoutEffect( () => {
-		if ( isCollectionUsesReference ) {
+		if ( isUsesReferencePreviewMode ) {
 			setAttributes( {
 				__privatePreviewState: {
 					isPreview: usesReferencePreviewMessage.length > 0,
@@ -263,12 +301,12 @@ export const useSetPreviewState = ( {
 	}, [
 		setAttributes,
 		usesReferencePreviewMessage,
-		isCollectionUsesReference,
+		isUsesReferencePreviewMode,
 	] );
 
 	// Running setPreviewState function provided by Collection, if it exists.
 	useLayoutEffect( () => {
-		if ( ! setPreviewState && ! isCollectionUsesReference ) {
+		if ( ! setPreviewState && ! isUsesReferencePreviewMode ) {
 			return;
 		}
 
@@ -294,11 +332,14 @@ export const useSetPreviewState = ( {
 	 * - Products by tag
 	 * - Products by attribute
 	 */
+	const termId =
+		location.type === LocationType.Archive
+			? location.sourceData?.termId
+			: null;
 	useLayoutEffect( () => {
-		if ( ! setPreviewState && ! isCollectionUsesReference ) {
+		if ( ! setPreviewState && ! isUsesReferencePreviewMode ) {
 			const isGenericArchiveTemplate =
-				location.type === LocationType.Archive &&
-				location.sourceData?.termId === null;
+				location.type === LocationType.Archive && termId === null;
 
 			setAttributes( {
 				__privatePreviewState: {
@@ -315,11 +356,11 @@ export const useSetPreviewState = ( {
 	}, [
 		attributes?.query?.inherit,
 		usesReferencePreviewMessage,
-		location.sourceData?.termId,
+		termId,
 		location.type,
 		setAttributes,
 		setPreviewState,
-		isCollectionUsesReference,
+		isUsesReferencePreviewMode,
 	] );
 };
 
