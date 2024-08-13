@@ -22,6 +22,22 @@ class ProductImage extends AbstractBlock {
 	 */
 	protected $api_version = '2';
 
+
+	/**
+	 * Get the frontend script handle for this block type.
+	 *
+	 * @param string $key Data to get, or default to everything.
+	 */
+	protected function get_block_type_script( $key = null ) {
+		$script = [
+			'handle'       => 'wc-' . $this->block_name . '-interactivity-frontend',
+			'path'         => $this->asset_api->get_block_asset_build_path( $this->block_name . '-interactivity-frontend' ),
+			'dependencies' => [ 'wc-interactivity' ],
+		];
+
+		return $key ? $script[ $key ] : $script;
+	}
+
 	/**
 	 * Get block supports. Shared with the frontend.
 	 * IMPORTANT: If you change anything here, make sure to update the JS file too.
@@ -47,13 +63,6 @@ class ProductImage extends AbstractBlock {
 			),
 			'__experimentalSelector' => '.wc-block-components-product-image',
 		);
-	}
-
-	/**
-	 * It is necessary to register and enqueues assets during the render phase because we want to load assets only if the block has the content.
-	 */
-	protected function register_block_type_assets() {
-		return null;
 	}
 
 	/**
@@ -125,12 +134,28 @@ class ProductImage extends AbstractBlock {
 	private function render_anchor( $product, $on_sale_badge, $product_image, $attributes ) {
 		$product_permalink = $product->get_permalink();
 
-		$pointer_events = false === $attributes['showProductLink'] ? 'pointer-events: none;' : '';
+		$is_link        = true === $attributes['showProductLink'];
+		$pointer_events = $is_link ? '' : 'pointer-events: none;';
+
+		$directives = '';
+		if ( $is_link ) {
+			$context    = array( 'productId' => $product->get_id() );
+			$directives = '
+				data-wc-interactive=\'' . wp_json_encode( array( 'namespace' => 'woocommerce/product-image' ), JSON_NUMERIC_CHECK | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ) . '\'
+				data-wc-context=\'' . wp_json_encode( $context, JSON_NUMERIC_CHECK | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP ) . '\'
+				data-wc-on--click=actions.triggerEvent
+			';
+		}
 
 		return sprintf(
-			'<a href="%1$s" style="%2$s">%3$s %4$s</a>',
+			'<a
+				href="%1$s"
+				style="%2$s"
+				%3$s
+			>%4$s %5$s</a>',
 			$product_permalink,
 			$pointer_events,
+			$directives,
 			$on_sale_badge,
 			$product_image
 		);
@@ -194,7 +219,6 @@ class ProductImage extends AbstractBlock {
 	 */
 	protected function render( $attributes, $content, $block ) {
 		if ( ! empty( $content ) ) {
-			parent::register_block_type_assets();
 			$this->register_chunk_translations( [ $this->block_name ] );
 			return $content;
 		}

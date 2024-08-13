@@ -70,6 +70,16 @@ export const triggerProductListRenderedEvent = ( payload: {
 	} );
 };
 
+export const triggerViewedProductEvent = ( payload: {
+	productId: number;
+} ): void => {
+	dispatchEvent( 'wc-blocks_viewed_product', {
+		bubbles: true,
+		cancelable: true,
+		detail: payload,
+	} );
+};
+
 /**
  * Function that listens to a jQuery event and dispatches a native JS event.
  * Useful to convert WC Core events into events that can be read by blocks.
