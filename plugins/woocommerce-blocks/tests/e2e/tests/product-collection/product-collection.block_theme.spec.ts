@@ -93,11 +93,11 @@ test.describe( 'Product Collection', () => {
 			'Add to cart', // woocommerce/product-button
 		];
 
-		test( 'In a post', async ( { page, pageObject } ) => {
+		test( 'In a post', async ( { page, editor, pageObject } ) => {
 			await pageObject.createNewPostAndInsertBlock();
 
 			await expect(
-				page.locator( '[data-testid="product-image"]:visible' )
+				editor.canvas.locator( '[data-testid="product-image"]:visible' )
 			).toHaveCount( 9 );
 
 			await pageObject.insertProductElements();
@@ -216,8 +216,8 @@ test.describe( 'Product Collection', () => {
 		} ) => {
 			await pageObject.createNewPostAndInsertBlock();
 
-			const allProducts = pageObject.products;
-			const salePoducts = pageObject.products.filter( {
+			let allProducts = pageObject.products;
+			let salePoducts = pageObject.products.filter( {
 				hasText: 'Product on sale',
 			} );
 
@@ -232,6 +232,11 @@ test.describe( 'Product Collection', () => {
 			await expect( salePoducts ).toHaveCount( 6 );
 
 			await pageObject.publishAndGoToFrontend();
+			await pageObject.refreshLocators( 'frontend' );
+			allProducts = pageObject.products;
+			salePoducts = pageObject.products.filter( {
+				hasText: 'Product on sale',
+			} );
 
 			await expect( allProducts ).toHaveCount( 6 );
 			await expect( salePoducts ).toHaveCount( 6 );
@@ -758,6 +763,7 @@ test.describe( 'Product Collection', () => {
 
 				const postId = await editor.publishPost();
 				await page.goto( `/?p=${ postId }` );
+				await pageObject.refreshLocators( 'frontend' );
 
 				await expect( pageObject.products ).toHaveCount( 2 );
 
@@ -1107,7 +1113,6 @@ test.describe( 'Product Collection', () => {
 		} );
 
 		test( 'With multiple Pagination blocks', async ( {
-			page,
 			admin,
 			editor,
 			pageObject,
@@ -1115,7 +1120,9 @@ test.describe( 'Product Collection', () => {
 			await admin.createNewPost();
 			await pageObject.insertProductCollection();
 			await pageObject.chooseCollectionInPost( 'productCatalog' );
-			const paginations = page.getByLabel( BLOCK_LABELS.pagination );
+			const paginations = editor.canvas.getByLabel(
+				BLOCK_LABELS.pagination
+			);
 
 			await expect( paginations ).toHaveCount( 1 );
 
@@ -1409,15 +1416,12 @@ test.describe( 'Product Collection', () => {
 			editor,
 		} ) => {
 			await pageObject.createNewPostAndInsertBlock();
-			const productTemplate = page.getByLabel(
-				BLOCK_LABELS.productTemplate
-			);
-			await expect( productTemplate ).toBeVisible();
+			await expect( pageObject.productTemplate ).toBeVisible();
 
 			// Refresh the post and verify the block is still visible
 			await editor.publishPost();
 			await page.reload();
-			await expect( productTemplate ).toBeVisible();
+			await expect( pageObject.productTemplate ).toBeVisible();
 		} );
 
 		test( 'On Sale collection should be visible after Refresh', async ( {
@@ -1449,15 +1453,12 @@ test.describe( 'Product Collection', () => {
 			editor,
 		} ) => {
 			await pageObject.createNewPostAndInsertBlock( 'onSale' );
-			const productTemplate = page.getByLabel(
-				BLOCK_LABELS.productTemplate
-			);
-			await expect( productTemplate ).toBeVisible();
+			await expect( pageObject.productTemplate ).toBeVisible();
 
 			// Refresh the post and verify "On Sale" collection is still visible
 			await editor.saveDraft();
 			await page.reload();
-			await expect( productTemplate ).toBeVisible();
+			await expect( pageObject.productTemplate ).toBeVisible();
 		} );
 	} );
 
@@ -1726,18 +1727,17 @@ test.describe( 'Testing registerProductCollection', () => {
 		pageObject,
 		editor,
 		admin,
-		page,
 	} ) => {
 		await admin.createNewPost();
 		await editor.insertBlockUsingGlobalInserter( pageObject.BLOCK_NAME );
-		await page
+		await editor.canvas
 			.getByRole( 'button', {
 				name: 'Choose collection',
 			} )
 			.click();
 
 		// Get text of all buttons in the collection chooser
-		const collectionChooserButtonsTexts = await editor.page
+		const collectionChooserButtonsTexts = await editor.canvas
 			.locator( '.wc-blocks-product-collection__collection-button-title' )
 			.allTextContents();
 
@@ -1846,7 +1846,7 @@ test.describe( 'Testing registerProductCollection', () => {
 			await pageObject.createNewPostAndInsertBlock(
 				'myCustomCollectionWithPreview'
 			);
-			const previewButtonLocator = editor.page.getByTestId(
+			const previewButtonLocator = editor.canvas.getByTestId(
 				SELECTORS.previewButtonTestID
 			);
 
@@ -1906,7 +1906,7 @@ test.describe( 'Testing registerProductCollection', () => {
 			await pageObject.createNewPostAndInsertBlock(
 				'myCustomCollectionWithAdvancedPreview'
 			);
-			const previewButtonLocator = editor.page.getByTestId(
+			const previewButtonLocator = editor.canvas.getByTestId(
 				SELECTORS.previewButtonTestID
 			);
 
