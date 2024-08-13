@@ -104,7 +104,10 @@ test.describe( 'Cart Block page', { tag: [ '@payments', '@services' ] }, () => {
 			page.getByRole( 'heading', { name: testPage.title } )
 		).toBeVisible();
 		await expect(
-			page.getByRole( 'link', { name: simpleProductName, exact: true } )
+			page.getByRole( 'link', {
+				name: simpleProductName,
+				exact: true,
+			} )
 		).toBeVisible();
 		await expect( page.getByText( simpleProductDesc ) ).toBeVisible();
 		await expect(
@@ -128,7 +131,9 @@ test.describe( 'Cart Block page', { tag: [ '@payments', '@services' ] }, () => {
 
 		// add cross-sell products to cart
 		await expect(
-			page.getByRole( 'heading', { name: 'You may be interested in…' } )
+			page.getByRole( 'heading', {
+				name: 'You may be interested in…',
+			} )
 		).toBeVisible();
 		await page
 			.getByLabel( `Add to cart: “${ simpleProductName } Cross-Sell 1”` )
@@ -152,7 +157,9 @@ test.describe( 'Cart Block page', { tag: [ '@payments', '@services' ] }, () => {
 			page.getByRole( 'heading', { name: testPage.title } )
 		).toBeVisible();
 		await expect(
-			page.getByRole( 'heading', { name: 'You may be interested in…' } )
+			page.getByRole( 'heading', {
+				name: 'You may be interested in…',
+			} )
 		).toBeHidden();
 		await expect(
 			page.locator(
@@ -166,7 +173,9 @@ test.describe( 'Cart Block page', { tag: [ '@payments', '@services' ] }, () => {
 		await page.locator( ':nth-match(:text("Remove item"), 3)' ).click();
 		await page.locator( ':nth-match(:text("Remove item"), 2)' ).click();
 		await expect(
-			page.getByRole( 'heading', { name: 'You may be interested in…' } )
+			page.getByRole( 'heading', {
+				name: 'You may be interested in…',
+			} )
 		).toBeVisible();
 
 		// check if the link to proceed to the checkout exists
