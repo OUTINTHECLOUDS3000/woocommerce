@@ -39,6 +39,74 @@ export const getLatestGithubReleaseVersion = async ( options: {
 	).tagName;
 };
 
+export const getIssuesByLabel = async (
+	options: {
+		owner?: string;
+		name?: string;
+		pageSize?: number;
+	},
+	label: string
+): Promise< any > => {
+	const { owner, name, pageSize } = options;
+
+	try {
+		const { data } = await octokitWithAuth().request(
+			'GET /repos/{owner}/{repo}/issues{?labels}',
+			{
+				owner,
+				repo: name,
+				labels: label,
+				per_page: pageSize || 100,
+			}
+		);
+		return {
+			results: data,
+		};
+	} catch ( e ) {
+		if (
+			e.status === 404 &&
+			e.response.data.message === 'Branch not found'
+		) {
+			return false;
+		}
+		throw new Error( e );
+	}
+};
+
+export const updateIssue = async (
+	options: {
+		owner?: string;
+		name?: string;
+	},
+	issueNumber: number,
+	updates: {
+		labels?: string[];
+	}
+): Promise< any > => {
+	const { owner, name } = options;
+
+	try {
+		const branchOnGithub = await octokitWithAuth().request(
+			'PATCH /repos/{owner}/{repo}/issues/{issue_number}',
+			{
+				owner,
+				repo: name,
+				issue_number: issueNumber,
+				...updates,
+			}
+		);
+		return branchOnGithub;
+	} catch ( e ) {
+		if (
+			e.status === 404 &&
+			e.response.data.message === 'Issue not found'
+		) {
+			return false;
+		}
+		throw new Error( e );
+	}
+};
+
 export const doesGithubBranchExist = async (
 	options: {
 		owner?: string;
