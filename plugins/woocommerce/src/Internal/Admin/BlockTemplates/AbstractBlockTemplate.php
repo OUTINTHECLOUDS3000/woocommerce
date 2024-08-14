@@ -29,6 +29,39 @@ abstract class AbstractBlockTemplate implements BlockTemplateInterface {
 	public function get_description(): string {
 		return '';
 	}
+	/**
+	 * Get the template name.
+	 */
+	public function get_name(): string {
+		return '';
+	}
+	/**
+	 * Get the template attributes.
+	 */
+	public function get_attributes(): array {
+		return array();
+	}
+
+	/**
+	 * Get the template order.
+	 */
+	public function get_order() {
+		return null;
+	}
+
+	/**
+	 * Get the template hide conditions.
+	 */
+	public function get_hide_conditions() {
+		return array();
+	}
+
+	/**
+	 * Get the template disable conditions.
+	 */
+	public function get_disable_conditions() {
+		return array();
+	}
 
 	/**
 	 * Get the template area.

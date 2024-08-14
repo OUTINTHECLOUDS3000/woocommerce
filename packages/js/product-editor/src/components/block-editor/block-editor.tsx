@@ -36,6 +36,7 @@ import {
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore store should be included.
 	useEntityBlockEditor,
+	useEntityProp,
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore store should be included.
 	useEntityRecord,
@@ -88,10 +89,6 @@ export function BlockEditor( {
 	productId,
 	setIsEditorLoading,
 }: BlockEditorProps ) {
-	const [ selectedProductFormId, setSelectedProductFormId ] = useState<
-		number | null
-	>( null );
-
 	useConfirmUnsavedProductChanges( postType );
 
 	/**
@@ -215,6 +212,12 @@ export function BlockEditor( {
 		{ id: productId !== -1 ? productId : 0 }
 	);
 
+	const [ selectedProductFormId ] = useEntityProp(
+		'postType',
+		postType,
+		'__provisorySelectedProductFormId'
+	);
+
 	// Pull the product templates from the store.
 	const productForms = useSelect( ( sel ) => {
 		return (
@@ -223,15 +226,6 @@ export function BlockEditor( {
 			} ) || []
 		);
 	}, [] ) as ProductFormPostProps[];
-
-	// Set the default product form template ID.
-	useEffect( () => {
-		if ( ! productForms.length ) {
-			return;
-		}
-
-		setSelectedProductFormId( productForms[ 0 ].id );
-	}, [ productForms ] );
 
 	const isEditorLoading =
 		! settings ||
@@ -262,7 +256,6 @@ export function BlockEditor( {
 		},
 		[ productForms, selectedProductFormId ]
 	);
-
 	useLayoutEffect(
 		function setupEditor() {
 			if ( isEditorLoading ) {
@@ -278,7 +271,7 @@ export function BlockEditor( {
 			 * If the product form template is not available, use the block instances.
 			 * ToDo: Remove this fallback once the product form template is stable/available.
 			 */
-			const editorTemplate = blockInstances ?? productFormTemplate;
+			const editorTemplate = productFormTemplate || blockInstances;
 
 			onChange( editorTemplate, {} );
 

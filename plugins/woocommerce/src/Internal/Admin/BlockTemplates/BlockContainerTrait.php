@@ -201,6 +201,37 @@ trait BlockContainerTrait {
 	}
 
 	/**
+	 * Get the inner blocks as a comment delimited template.
+	 */
+	public function get_comment_delimited_template(): string {
+
+		$arr          = array();
+		$inner_blocks = $this->get_inner_blocks_sorted_by_order();
+		if ( ! empty( $inner_blocks ) ) {
+			$arr = array_map(
+				function ( BlockInterface $block ) {
+					return $block->get_comment_delimited_template();
+				},
+				$inner_blocks
+			);
+		}
+
+		$name       = $this->get_name();
+		$attributes = $this->get_augmented_attributes();
+
+		$children = implode( '', $arr );
+
+		$content = '';
+		if ( 'core/column' === $name ) {
+			$content = '<div class="wp-block-column" />';
+		} elseif ( 'core/columns' === $name ) {
+			$content = '<div class="wp-block-columns" />';
+		}
+
+		return '' !== $name ? get_comment_delimited_block_content( $name, $attributes, $content . $children ) : $children;
+	}
+
+	/**
 	 * Do the `woocommerce_block_template_after_add_block` action.
 	 * Handle exceptions thrown by the action.
 	 *

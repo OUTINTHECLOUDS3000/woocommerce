@@ -5,6 +5,8 @@
 
 namespace Automattic\WooCommerce\Admin\Features\ProductBlockEditor;
 
+use Automattic\WooCommerce\Internal\Features\ProductBlockEditor\ProductTemplates\SimpleProductTemplate;
+
 /**
  * Handle retrieval of product forms.
  */
@@ -24,6 +26,20 @@ class ProductFormsController {
 	 */
 	public function init() { // phpcs:ignore WooCommerce.Functions.InternalInjectionMethod.MissingFinal, WooCommerce.Functions.InternalInjectionMethod.MissingInternalTag -- Not an injection.
 		add_action( 'upgrader_process_complete', array( $this, 'migrate_templates_when_plugin_updated' ), 10, 2 );
+		add_action( 'the_content', array( $this, 'maybe_add_product_form_templates' ), 10, 2 );
+	}
+
+	/**
+	 * Maybe add product form templates to the posts array.
+	 */
+	public function maybe_add_product_form_templates( $content ) {
+		$post = get_post();
+
+		if ( 'product_form' === $post->post_type && 'Simple' === $post->post_title ) {
+			$simple = new SimpleProductTemplate();
+			return $simple->get_comment_delimited_template();
+		}
+		return $content;
 	}
 
 	/**
@@ -105,11 +121,13 @@ class ProductFormsController {
 
 				if ( ! empty( $post ) ) {
 					wp_update_post(
-						array(
-							'ID'           => $post->ID,
-							'post_title'   => $file_data['title'],
-							'post_content' => BlockTemplateUtils::get_template_content( $file_path ),
-							'post_excerpt' => $file_data['description'],
+						wp_slash(
+							array(
+								'ID'           => $post->ID,
+								'post_title'   => $file_data['title'],
+								'post_content' => BlockTemplateUtils::get_template_content( $file_path ),
+								'post_excerpt' => $file_data['description'],
+							)
 						)
 					);
 				}
@@ -123,13 +141,15 @@ class ProductFormsController {
 			}
 
 			$post = wp_insert_post(
-				array(
-					'post_title'   => $file_data['title'],
-					'post_name'    => $slug,
-					'post_status'  => 'publish',
-					'post_type'    => 'product_form',
-					'post_content' => BlockTemplateUtils::get_template_content( $file_path ),
-					'post_excerpt' => $file_data['description'],
+				wp_slash(
+					array(
+						'post_title'   => $file_data['title'],
+						'post_name'    => $slug,
+						'post_status'  => 'publish',
+						'post_type'    => 'product_form',
+						'post_content' => BlockTemplateUtils::get_template_content( $file_path ),
+						'post_excerpt' => $file_data['description'],
+					)
 				)
 			);
 		}
