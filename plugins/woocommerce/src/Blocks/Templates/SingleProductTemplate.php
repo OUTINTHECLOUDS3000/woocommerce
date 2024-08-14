@@ -23,7 +23,7 @@ class SingleProductTemplate extends AbstractTemplate {
 	 */
 	public function init() {
 		add_action( 'template_redirect', array( $this, 'render_block_template' ) );
-		add_filter( 'get_block_templates', array( $this, 'update_single_product_content' ), 11, 3 );
+		add_filter( 'get_block_templates', array( $this, 'update_single_product_content' ), 11, 1 );
 	}
 
 	/**
@@ -57,7 +57,24 @@ class SingleProductTemplate extends AbstractTemplate {
 			}
 			$templates = get_block_templates( array( 'slug__in' => $valid_slugs ) );
 
-			if ( isset( $templates[0] ) && BlockTemplateUtils::template_has_legacy_template_block( $templates[0] ) ) {
+			if ( count( $templates ) === 0 ) {
+				return;
+			}
+
+			// Use the first template by default.
+			$template = $templates[0];
+
+			// Check if there is a template matching the slug `single-product-{post_name}`.
+			if ( count( $valid_slugs ) > 1 && count( $templates ) > 1 ) {
+				foreach ( $templates as $t ) {
+					if ( $valid_slugs[1] === $t->slug ) {
+						$template = $t;
+						break;
+					}
+				}
+			}
+
+			if ( isset( $template ) && BlockTemplateUtils::template_has_legacy_template_block( $template ) ) {
 				add_filter( 'woocommerce_disable_compatibility_layer', '__return_true' );
 			}
 
@@ -68,12 +85,10 @@ class SingleProductTemplate extends AbstractTemplate {
 	/**
 	 * Add the block template objects to be used.
 	 *
-	 * @param array  $query_result Array of template objects.
-	 * @param array  $query Optional. Arguments to retrieve templates.
-	 * @param string $template_type wp_template or wp_template_part.
+	 * @param array $query_result Array of template objects.
 	 * @return array
 	 */
-	public function update_single_product_content( $query_result, $query, $template_type ) {
+	public function update_single_product_content( $query_result ) {
 		$query_result = array_map(
 			function ( $template ) {
 				if ( str_contains( $template->slug, self::SLUG ) ) {
