@@ -56,6 +56,8 @@ class CustomOrdersTableController {
 
 	public const HPOS_FTS_ORDER_ITEM_INDEX_CREATED_OPTION = 'woocommerce_hpos_order_item_fts_index_created';
 
+	public const HPOS_DATASTORE_CACHING_ENABLED_OPTION = 'woocommerce_hpos_datastore_caching_enabled';
+
 	/**
 	 * The data store object to use.
 	 *
@@ -200,6 +202,16 @@ class CustomOrdersTableController {
 	}
 
 	/**
+	 * Is caching of data within the CustomerOrdersTable datastores enabled?
+	 *
+	 * @return bool True if the caching is enabled within the CustomeOrderTable Datastores.
+	 */
+	public function hpos_data_caching_is_enabled(): bool {
+		return get_option( self::HPOS_DATASTORE_CACHING_ENABLED_OPTION ) === 'yes' &&
+			$this->custom_orders_table_usage_is_enabled();
+	}
+
+	/**
 	 * Gets the instance of the orders data store to use.
 	 *
 	 * @param \WC_Object_Data_Store_Interface|string $default_data_store The default data store (as received via the woocommerce_order_data_store hook).
@@ -310,6 +322,9 @@ class CustomOrdersTableController {
 	private function process_updated_option( $option, $old_value, $value ) {
 		if ( DataSynchronizer::ORDERS_DATA_SYNC_ENABLED_OPTION === $option && 'no' === $value ) {
 			$this->data_synchronizer->cleanup_synchronization_state();
+		}
+		if ( self::HPOS_DATASTORE_CACHING_ENABLED_OPTION === $option && $old_value !== $value && 'yes' === $value ) {
+			$this->data_store->clear_all_cached_data();
 		}
 	}
 
