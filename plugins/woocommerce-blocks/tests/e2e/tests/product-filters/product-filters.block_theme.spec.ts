@@ -412,7 +412,7 @@ test.describe( `${ blockData.name }`, () => {
 		).toBeVisible();
 	} );
 
-	test( 'Dimentions > Block spacing: changing option should update the preview', async ( {
+	test( 'Dimensions > Block spacing: changing option should update the preview', async ( {
 		editor,
 		pageObject,
 	} ) => {
@@ -438,5 +438,39 @@ test.describe( `${ blockData.name }`, () => {
 		await expect(
 			block.locator( blockData.selectors.editor.layoutWrapper )
 		).toHaveCSS( 'gap', '0px' );
+	} );
+
+	test( 'should be able to be added to the Product Filters Parent wrapper block', async ( {
+		editor,
+		pageObject,
+	} ) => {
+		await pageObject.addProductFiltersBlock( { cleanContent: true } );
+
+		const block = editor.canvas.getByLabel(
+			'Block: Product Filters (Experimental)'
+		);
+		await expect( block ).toBeVisible();
+
+		const searchTerms = [
+			'status (experimental)',
+			'price (experimental)',
+			'rating (experimental)',
+			'attribute (experimental)',
+			'active (experimental)',
+		];
+
+		const addBlockButton = block.getByRole( 'button', {
+			name: 'Add block',
+		} );
+		await addBlockButton.click();
+
+		for ( const filter of searchTerms ) {
+			await editor.page.getByPlaceholder( 'Search' ).fill( filter );
+
+			const searchResult = editor.page.getByRole( 'option', {
+				name: filter.toLowerCase(),
+			} );
+			await expect( searchResult ).toBeVisible();
+		}
 	} );
 } );

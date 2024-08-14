@@ -8,6 +8,7 @@
 	"supports": {
 		"interactivity": true,
 		"inserter": false,
+		"multiple": false,
 		"color": {
 			"background": false,
 			"text": true
@@ -38,6 +39,6 @@
 		}
 	},
 	"textdomain": "woocommerce",
-	"apiVersion": 2,
+	"apiVersion": 3,
 	"$schema": "https://schemas.wp.org/trunk/block.json"
 }
