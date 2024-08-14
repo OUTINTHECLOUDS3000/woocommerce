@@ -274,6 +274,7 @@ final class WooCommerce {
 				'name' => 'WooCommerce',
 			)
 		);
+		$config->ensure( 'sync' );
 	}
 
 	/**
