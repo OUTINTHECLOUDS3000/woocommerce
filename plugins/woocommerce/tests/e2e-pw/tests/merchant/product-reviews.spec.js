@@ -77,6 +77,9 @@ test.describe(
 						.first()
 				).toContainText( review.product_name );
 			}
+
+			// Check if the reviews are displayed
+			expect( reviews.length ).toBeGreaterThan( 0 );
 		} );
 
 		test( 'can filter the reviews by product', async ( {
@@ -194,6 +197,112 @@ test.describe(
 			await expect(
 				page.getByLabel( `${ updatedRating } out of 5` )
 			).toBeVisible();
+		} );
+
+		test( 'can approve a product review', async ( { page, reviews } ) => {
+			const review = reviews[ 0 ]; // Select the first review for approval
+
+			// Go to the Product Reviews page
+			await page.goto(
+				`wp-admin/edit.php?post_type=product&page=product-reviews`
+			);
+
+			// Locate the review to be approved
+			const reviewRow = page.locator( `#comment-${ review.id }` );
+
+			// Ensure the review is not already approved
+			const approveButton = reviewRow.getByRole( 'button', {
+				name: 'Approve',
+			} );
+
+			// Hover to reveal action buttons
+			await reviewRow.hover();
+
+			// Click the "Approve" button and wait for the state to become 'networkidle'
+			await approveButton.click();
+
+			// Verify the review is approved by checking the presence of "Unapprove" button
+			const unapproveButton = reviewRow.getByRole( 'button', {
+				name: 'Unapprove',
+			} );
+			await expect( unapproveButton ).toBeVisible();
+		} );
+
+		test( 'can mark a product review as spam', async ( {
+			page,
+			reviews,
+		} ) => {
+			const review = reviews[ 0 ]; // Select the first review to mark as spam
+
+			// Go to the Product Reviews page
+			await page.goto(
+				`wp-admin/edit.php?post_type=product&page=product-reviews`
+			);
+
+			// Locate the review to be marked as spam
+			const reviewRow = page.locator( `#comment-${ review.id }` );
+			await reviewRow.hover();
+
+			// Select Spam action and verify the review is marked as spam
+			await reviewRow.getByRole( 'button', { name: 'Spam' } ).click();
+
+			// Navigate to the "Spam" tab to verify the review is marked as spam
+			await page.click( 'a[href*="comment_status=spam"]' );
+
+			// Check if the spammed review is located on the "Spam" page
+			await expect(
+				page.locator( `#comment-${ review.id }` )
+			).toBeVisible();
+		} );
+
+		test( 'can reply to a product review', async ( { page, reviews } ) => {
+			const review = reviews[ 0 ]; // Select the first review to reply to
+
+			// Go to the Product Reviews page
+			await page.goto(
+				'wp-admin/edit.php?post_type=product&page=product-reviews'
+			);
+
+			// Locate the review to be replied to
+			const reviewRow = page.locator( `#comment-${ review.id }` );
+			await reviewRow.hover();
+
+			// Click the Reply button within the review row
+			await reviewRow.getByRole( 'button', { name: 'Reply' } ).click();
+
+			// Wait for the reply textarea to be visible
+			const replyTextArea = page.locator( 'textarea#replycontent' );
+			await expect( replyTextArea ).toBeVisible();
+
+			// Fill in the reply and submit it
+			const replyText = 'Thank you for your feedback!';
+			await replyTextArea.fill( replyText );
+
+			// Ensure the "Submit Reply" button within the reply area is visible and clickable
+			const submitReplyButton = page.locator(
+				'button.save.button.button-primary'
+			);
+			await expect( submitReplyButton ).toBeVisible();
+			await submitReplyButton.click();
+
+			// Verify that the reply is visible in the admin review list
+			const replyLocator = page.locator(
+				`tr#comment-${ review.id } + tr.comment-reply .comment-text`
+			);
+			await expect( replyLocator ).toBeVisible();
+
+			// Get the product link from the review row
+			const productLink = await reviewRow
+				.locator( 'a.comments-view-item-link' )
+				.getAttribute( 'href' );
+			await page.goto( productLink );
+			await page.click( '#tab-reviews' );
+
+			// Verify that the reply is visible in the shop's reviews section
+			const replyReviews = page.locator(
+				`div.comment_container:has-text("${ replyText }")`
+			);
+			await expect( replyReviews ).toBeVisible();
 		} );
 
 		test( 'can delete a product review', async ( { page, reviews } ) => {
