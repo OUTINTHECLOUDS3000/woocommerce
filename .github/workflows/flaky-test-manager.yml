@@ -1,0 +1,50 @@
+name: Flaky Test Manager
+
+on:
+    pull_request:
+        types: [synchronize]
+    schedule:
+        - cron: '0 * * * *' # Run every hour
+    workflow_dispatch: # Allow manual triggering
+
+concurrency:
+    group: ${{ github.workflow }}-schedule
+    cancel-in-progress: true
+
+jobs:
+    track-flaky-tests:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: '18'
+
+            - name: Install npm latest
+              run: npm install -g npm@latest
+
+            - name: Install dependencies # ignore package.json in the repo
+              run: |
+                  echo '{}' > package.json
+                  npm install @octokit/rest@21.0.1
+                  npm install axios@1.7.2
+                  npm install google-auth-library@9.11.0
+                  npm install googleapis@140.0.1
+                  npm install dotenv@16.4.5
+
+            - name: Create key.json
+              run: echo '${{ secrets.FLAKY_TESTS_GOOGLE_SHEETS_CREDENTIALS }}' > ./key.json
+
+            - name: Run flaky test tracker
+              run: node ./.github/workflows/scripts/flaky-test-manager.mjs
+              env:
+                  BUILDKITE_API_URL: ${{ secrets.FLAKY_TESTS_BUILDKITE_API_URL }}
+                  BUILDKITE_API_TOKEN: ${{ secrets.FLAKY_TESTS_BUILDKITE_API_TOKEN }}
+                  GOOGLE_SHEET_ID: ${{ secrets.FLAKY_TESTS_GOOGLE_SHEET_ID }}
+                  GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.FLAKY_TESTS_GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GITHUB_REPO_OWNER: 'woocommerce'
+                  GITHUB_REPO_NAME: 'woocommerce'
