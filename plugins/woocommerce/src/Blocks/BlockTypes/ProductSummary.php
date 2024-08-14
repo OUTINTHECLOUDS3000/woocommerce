@@ -1,10 +1,14 @@
 <?php
+
 namespace Automattic\WooCommerce\Blocks\BlockTypes;
+
+use Automattic\WooCommerce\Blocks\Utils\StyleAttributesUtils;
 
 /**
  * ProductSummary class.
  */
-class ProductSummary extends AbstractBlock {
+class ProductSummary extends AbstractBlock
+{
 
 	/**
 	 * Block name.
@@ -27,7 +31,8 @@ class ProductSummary extends AbstractBlock {
 	 *
 	 * @return array
 	 */
-	protected function get_block_type_supports() {
+	protected function get_block_type_supports()
+	{
 		return array(
 			'color'                  =>
 			array(
@@ -44,11 +49,100 @@ class ProductSummary extends AbstractBlock {
 	}
 
 	/**
-	 * Register script and style assets for the block type before it is registered.
+	 * Overwrite parent method to prevent script registration.
 	 *
-	 * This registers the scripts; it does not enqueue them.
+	 * It is necessary to register and enqueues assets during the render
+	 * phase because we want to load assets only if the block has the content.
 	 */
-	protected function register_block_type_assets() {
-		$this->register_chunk_translations( [ $this->block_name ] );
+	protected function register_block_type_assets()
+	{
+		return null;
+	}
+
+	/**
+	 * Register the context.
+	 */
+	protected function get_block_type_uses_context()
+	{
+		return ['query', 'queryId', 'postId'];
+	}
+
+	private function get_source($product, $show_description_if_empty)
+	{
+		$short_description = $product->get_short_description();
+
+		if ($short_description) {
+			return $short_description;
+		}
+
+		$description = $product->get_description();
+
+		if ($show_description_if_empty && $description) {
+			return $description;
+		}
+
+		return '';
+	}
+
+	private function create_anchor($product, $link_text)
+	{
+		$href = esc_url($product->get_permalink());
+		$text = wp_kses_post($link_text);
+
+		return '</br></br><a class="wp-block-woocommerce-product-summary__read_more" href="' . $href . '#tab-description">' . $text . '</a>';
+	}
+
+	private function trim_keeping_html_formatting($input, $length)
+	{
+
+		return html_entity_decode(wp_trim_words(htmlentities(wpautop($input, false)), $length));
+	}
+
+	/**
+	 * Include and render the block.
+	 *
+	 * @param array    $attributes Block attributes. Default empty array.
+	 * @param string   $content    Block content. Default empty string.
+	 * @param WP_Block $block      Block instance.
+	 * @return string Rendered block type output.
+	 */
+	protected function render($attributes, $content, $block)
+	{
+		if (!empty($content)) {
+			parent::register_block_type_assets();
+			$this->register_chunk_translations([$this->block_name]);
+			return $content;
+		}
+
+		$post_id = isset($block->context['postId']) ? $block->context['postId'] : '';
+		$product = wc_get_product($post_id);
+
+		if (!$product) {
+			return '';
+		}
+
+		$show_description_if_empty = isset($attributes['showDescriptionIfEmpty']) && $attributes['showDescriptionIfEmpty'];
+		$source                    = $this->get_source($product, $show_description_if_empty);
+
+		if (!$source) {
+			return '';
+		}
+
+		$summary_length = isset($attributes['summaryLength']) ? $attributes['summaryLength'] : false;
+		$link_text      = isset($attributes['linkText']) ? $attributes['linkText'] : '';
+		$show_link      = isset($attributes['showLink']) && $attributes['showLink'];
+		$summary        = $summary_length ? $this->trim_keeping_html_formatting($source, $summary_length) : $source;
+		$final_summary  = $show_link && $link_text ? $summary . $this->create_anchor($product, $link_text) : $summary;
+
+		$styles_and_classes = StyleAttributesUtils::get_classes_and_styles_by_attributes($attributes);
+
+		return sprintf(
+			'<div class="wp-block-woocommerce-product-summary"><div class="wc-block-components-product-summary %1$s" style="%2$s">
+				%3$s
+			</div></div>',
+			esc_attr($styles_and_classes['classes']),
+			esc_attr($styles_and_classes['styles'] ?? ''),
+			$final_summary
+		);
 	}
 }
